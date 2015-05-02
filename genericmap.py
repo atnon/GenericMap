@@ -76,10 +76,18 @@ class ParseGenerics:
         for match in Matches:
             MatchDict = match.groupdict()
             ParsedGenerics = self.parseGenMap(MatchDict["Generics"])
+            if ParsedGenerics.get("paddr"):
+                # Unit is on APB bus.
+                Bus = "APB"
+            elif ParsedGenerics.get("haddr"):
+                Bus = "AHB"
+            else:
+                Bus = None
             if ParsedGenerics.get("tech") != "padtech":
                 ComponentDict.update({
                     MatchDict["InstName"] :
                         {
+                            "Bus" : Bus,
                             "CompName" : MatchDict["CompName"],
                             "Comment" : MatchDict["Comment"],
                             "LibName" : MatchDict["LibName"],
