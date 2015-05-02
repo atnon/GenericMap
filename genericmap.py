@@ -2,11 +2,20 @@ import os
 import sys
 import re
 import argparse
+import pprint
 
+"""
+An almost retardedly complex RegEx.
+Would probably be better off with a proper parser,
+if I knew how to construct one.
+Available matching groups:
+- InstName
+- LibName
+- CompName
+- Comment
+- Generics
+"""
 CompiledPattern = re.compile(
-    # An almost retardedly complex RegEx.
-    # Would probably be better off with a proper parser,
-    # if I knew how to construct one.
     r"""
     (?P<InstName>[a-z0-9_]+)        # Component instatiation name
     (?:\s|\n)*:(?:\s|\n)*
@@ -43,12 +52,41 @@ class ParseGenerics:
             Data = InFile.read()
         return Data
 
+    def parseGenMap(self, generics):
+        GenericList = generics.split(",")
+        GenericDict = {}
+
+        GenericCounter = 0
+        for genericTuple in GenericList:
+            List = map(str.strip, genericTuple.split("=>"))
+            if len(List) == 2:
+                (Key, Value) = List
+                GenericDict.update({Key : Value})
+            else:
+                GenericDict.update({GenericCounter : List[0]})
+            GenericCounter = GenericCounter + 1
+        return GenericDict
+
+
     def parseVHDL(self):
         InputData = self.readFile()
         CleanedData = " ".join(InputData.split())
-        Matches = CompiledPattern.findall(CleanedData)
+        Matches = CompiledPattern.finditer(CleanedData)
+        ComponentDict = {}
         for match in Matches:
-            print match
+            MatchDict = match.groupdict()
+            ParsedGenerics = self.parseGenMap(MatchDict["Generics"])
+            if ParsedGenerics.get("tech") != "padtech":
+                ComponentDict.update({
+                    MatchDict["InstName"] :
+                        {
+                            "CompName" : MatchDict["CompName"],
+                            "Comment" : MatchDict["Comment"],
+                            "LibName" : MatchDict["LibName"],
+                            "Generics" : ParsedGenerics
+                        }
+                    })
+        pprint.pprint(ComponentDict)
 
 if __name__ == "__main__":
     args = parseArgs()
